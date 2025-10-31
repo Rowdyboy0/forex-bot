@@ -1,7 +1,7 @@
 # =============================================
-# ULTRA AI FOREX BOT – FINAL VERSION
+# ULTRA AI FOREX BOT – FINAL (NO PANDAS-TA)
 # 6 Pairs | Scalping/Swing | Multi-TF + Econ Filter + Auto-Retry
-# 97%+ Confidence | No Spam | Telegram Alerts
+# 97%+ Confidence | Telegram Alerts | Render-Ready
 # =============================================
 
 import os
@@ -22,7 +22,6 @@ import joblib
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 import threading
-import pandas_ta as ta
 import nest_asyncio
 import functools
 
@@ -74,7 +73,7 @@ SCALP_COOLDOWN = 300
 SWING_COOLDOWN = 14400
 
 XAI_API_KEY = os.getenv("XAI_API_KEY")
-NEWS_API_KEY = os.getenv("NEWSAPI_KEY")
+NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID"))
 
@@ -139,28 +138,44 @@ def get_ohlcv(symbol, interval, limit=200):
     data = resp.json()
     df = pd.DataFrame(data, columns=['time', 'open', 'high', 'low', 'close', 'volume', 'a','b','c','d','e','f'])
     df = df[['time', 'open', 'high', 'low', 'close', 'volume']].astype(float)
-    df['time'] = pd.to_datetime(df['time'], unit='s')
+    df['time'] = pd.to_datetime(df['time'], unit='ms')
     return df
 
-# ================= INDICATORS =================
+# ================= MANUAL INDICATORS (NO PANDAS-TA) =================
 def add_technical_features(df):
-    df['ema9'] = ta.ema(df['close'], length=9)
-    df['ema21'] = ta.ema(df['close'], length=21)
-    df['rsi'] = ta.rsi(df['close'], length=14)
-    macd = ta.macd(df['close'])
-    df['macd'] = macd['MACD_12_26_9']
-    df['macd_sig'] = macd['MACDs_12_26_9']
-    df['atr'] = ta.atr(df['high'], df['low'], df['close'], length=14)
-    bb = ta.bbands(df['close'], length=20)
-    df['bb_upper'] = bb['BBU_20_2.0']
-    df['bb_lower'] = bb['BBL_20_2.0']
+    # EMA
+    df['ema9'] = df['close'].ewm(span=9, adjust=False).mean()
+    df['ema21'] = df['close'].ewm(span=21, adjust=False).mean()
+    
+    # RSI
+    delta = df['close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+    rs = gain / loss
+    df['rsi'] = 100 - (100 / (1 + rs))
+    
+    # ATR
+    high_low = df['high'] - df['low']
+    high_close = (df['high'] - df['close'].shift()).abs()
+    low_close = (df['low'] - df['close'].shift()).abs()
+    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    df['atr'] = tr.rolling(14).mean()
+    
+    # Bollinger Bands
+    df['bb_mid'] = df['close'].rolling(20).mean()
+    df['bb_std'] = df['close'].rolling(20).std()
+    df['bb_upper'] = df['bb_mid'] + (df['bb_std'] * 2)
+    df['bb_lower'] = df['bb_mid'] - (df['bb_std'] * 2)
+    
+    # Volatility
     df['volatility'] = (df['high'] - df['low']) / df['close']
+    
     return df.fillna(0)
 
 # ================= ML + NLP + LLM =================
 def ml_predict(df):
     latest = df.iloc[-1:]
-    features = ['ema9', 'ema21', 'rsi', 'macd', 'macd_sig', 'atr', 'bb_upper', 'bb_lower', 'volatility']
+    features = ['ema9', 'ema21', 'rsi', 'atr', 'bb_upper', 'bb_lower', 'volatility']
     X = latest[features]
     X_scaled = scaler.transform(X)
     prob = xgb_model.predict_proba(X_scaled)[0][1]
