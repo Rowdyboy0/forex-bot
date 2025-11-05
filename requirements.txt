@@ -1,0 +1,13 @@
+python-telegram-bot==20.7
+pandas==2.2.2
+numpy==1.26.4
+pandas-ta==0.3.14b0
+transformers==4.35.0
+torch==2.1.0+cpu
+requests==2.31.0
+schedule==1.2.0
+python-dotenv==1.0.0
+xgboost==2.0.3
+scikit-learn==1.5.1
+nest_asyncio==1.6.0
+websockets==12.0
