@@ -1,6 +1,6 @@
 # =============================================
-# ULTRA AI FOREX BOT – FINAL | v21.5 + Python 3.11
-# NO PANDAS | NO UPDATER | 24/7 FREE
+# ULTRA AI FOREX BOT – FINAL | RENDER WORKER
+# NO PANDAS | NO NEST | 24/7 FREE
 # =============================================
 
 import os
@@ -15,7 +15,6 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 import threading
 import schedule
-import nest_asyncio
 
 # ================= AUTO-RETRY =================
 def retry(func):
@@ -30,7 +29,6 @@ def retry(func):
     return wrapper
 
 # ================= SETUP =================
-nest_asyncio.apply()
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
@@ -109,7 +107,8 @@ def grok_confidence(symbol, direction):
         txt = resp.json()['choices'][0]['message']['content']
         conf = json.loads(txt.replace("```json","").replace("```","").strip())['confidence']
         return conf
-    except:
+    except Exception as e:
+        print(f"LLM Error: {e}")
         return 50
 
 # ================= ECON CALENDAR =================
@@ -119,11 +118,16 @@ def load_news():
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     data = requests.get(url, timeout=10).json()
     now = datetime.utcnow()
-    news_events = [
-        datetime.strptime(e['date'], "%Y-%m-%d %H:%M:%S")
-        for e in data
-        if e.get('impact') == 'High' and datetime.strptime(e['date'], "%Y-%m-%d %H:%M:%S") > now - timedelta(hours=1)
-    ]
+    news_events = []
+    for e in data:
+        if e.get('impact') == 'High':
+            try:
+                t = datetime.strptime(e['date'].split('T')[0] + ' ' + e['date'].split('T')[1].split('-')[0], "%Y-%m-%d %H:%M:%S")
+                if t > now - timedelta(hours=1):
+                    news_events.append(t)
+            except:
+                continue
+    print(f"Calendar: {len(news_events)} events")
 
 def news_block():
     now = datetime.utcnow()
@@ -187,11 +191,9 @@ async def main():
     global app
     app = Application.builder().token(TELEGRAM_TOKEN).build()
 
-    # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button))
 
-    # Start background scanner
     load_news()
     schedule.every(6).hours.do(load_news)
 
