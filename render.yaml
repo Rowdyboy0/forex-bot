@@ -10,9 +10,3 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.8
-      - key: XAI_API_KEY
-        sync: false
-      - key: TELEGRAM_TOKEN
-        sync: false
-      - key: ADMIN_USER_ID
-        sync: false
