@@ -1,7 +1,6 @@
 # =============================================
-# ULTRA AI FOREX BOT – NO PANDAS | ZERO ERRORS
-# 6 Pairs | Scalping/Swing | LLM-Only 97%+
-# Free 24/7 | Render Ready
+# ULTRA AI FOREX BOT – FINAL | NO PANDAS | 24/7
+# Python 3.11 + Bot 21.5 = ZERO ERRORS
 # =============================================
 
 import os
@@ -99,10 +98,7 @@ def multi_tf_confirm(symbol, tf_list):
 # ================= LLM CONFIDENCE =================
 @retry
 def grok_confidence(symbol, direction):
-    prompt = f"""
-    Is {direction.upper()} on {symbol} 97%+ likely now?
-    Reply ONLY JSON: {{"confidence": 0-100}}
-    """
+    prompt = f"Is {direction.upper()} on {symbol} 97%+ likely now? Reply JSON: {{'confidence': 0-100}}"
     try:
         resp = requests.post(
             "https://api.x.ai/v1/chat/completions",
