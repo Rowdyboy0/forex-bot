@@ -1,6 +1,6 @@
 # =============================================
-# ULTRA AI FOREX BOT – FINAL | NO PANDAS | 24/7
-# Python 3.11 + Bot 21.5 = ZERO ERRORS
+# ULTRA AI FOREX BOT – FINAL | v21.5 + Python 3.11
+# NO PANDAS | NO UPDATER | 24/7 FREE
 # =============================================
 
 import os
@@ -60,7 +60,7 @@ news_events = []
 # ================= DATA =================
 @retry
 def get_klines(symbol, interval, limit=50):
-    url = f"https://api.binance.com/api/v3/klines"
+    url = "https://api.binance.com/api/v3/klines"
     params = {'symbol': BINANCE_MAP[symbol], 'interval': interval, 'limit': limit}
     data = requests.get(url, params=params, timeout=10).json()
     return [{'close': float(c[4]), 'high': float(c[2]), 'low': float(c[3]), 'vol': float(c[5])} for c in data]
@@ -159,8 +159,8 @@ def scan():
             asyncio.create_task(send_signal(sym, dir, price))
             last_signal[sym] = time.time()
 
-# ================= TELEGRAM =================
-async def start(update: Update, context):
+# ================= TELEGRAM HANDLERS =================
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_USER_ID: return
     kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("Scalping", callback_data="scalping")],
@@ -168,7 +168,7 @@ async def start(update: Update, context):
     ])
     await update.message.reply_text("**ULTRA BOT LIVE**\nChoose mode:", reply_markup=kb, parse_mode='Markdown')
 
-async def button(update: Update, context):
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global mode, pending
     q = update.callback_query
     await q.answer()
@@ -186,20 +186,23 @@ async def button(update: Update, context):
 async def main():
     global app
     app = Application.builder().token(TELEGRAM_TOKEN).build()
+
+    # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button))
 
+    # Start background scanner
     load_news()
     schedule.every(6).hours.do(load_news)
 
-    def run():
+    def run_scanner():
         while True:
             schedule.run_pending()
             time.sleep(1)
-    threading.Thread(target=run, daemon=True).start()
+    threading.Thread(target=run_scanner, daemon=True).start()
 
     print("BOT READY – /start")
-    await app.run_polling()
+    await app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
     asyncio.run(main())
