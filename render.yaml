@@ -1,6 +1,6 @@
 services:
-  - type: web
-    name: ultra-bot
+  - type: worker
+    name: ultra-forex-bot
     env: python
     region: singapore
     plan: free
